@@ -1,0 +1,122 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Activity {
+  id           String     @id @default(uuid())
+  type         ActivityType
+  subject      String
+  description  String?
+  due_date     DateTime?
+  completed    Boolean    @default(false)
+  completed_at DateTime?
+  related_to   RelatedToType
+  related_id   String
+  owner_id     String // References auth.users in Supabase
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+
+  @@index([related_to, related_id])
+  @@index([owner_id])
+}
+
+model Company {
+  id             String     @id @default(uuid())
+  name           String
+  industry       String?
+  website        String?
+  phone          String?
+  address        String?
+  city           String?
+  country        String?
+  annual_revenue Float?
+  employee_count Int?
+  notes          String?
+  created_by     String // References auth.users in Supabase
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+
+  contacts Contact[]
+  deals    Deal[]
+
+  @@index([created_by])
+}
+
+model Contact {
+  id         String     @id @default(uuid())
+  first_name String
+  last_name  String
+  email      String
+  phone      String?
+  job_title  String?
+  address    String?
+  city       String?
+  country    String?
+  notes      String?
+  created_by String // References auth.users in Supabase
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+
+  company_id String?
+  company    Company?  @relation(fields: [company_id], references: [id])
+  deals      Deal[]
+
+  @@index([company_id])
+  @@index([created_by])
+  @@index([email])
+}
+
+model Deal {
+  id                 String     @id @default(uuid())
+  name               String
+  description        String?
+  amount             Float
+  currency           String     @default("USD")
+  expected_close_date DateTime?
+  actual_close_date  DateTime?
+  stage              DealStage
+  probability        Int        @default(0) // 0-100
+  owner_id           String // References auth.users in Supabase
+  created_at         DateTime   @default(now())
+  updated_at         DateTime   @updatedAt
+
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  contact_id  String?
+  contact     Contact? @relation(fields: [contact_id], references: [id])
+
+  @@index([company_id])
+  @@index([contact_id])
+  @@index([owner_id])
+  @@index([stage])
+}
+
+enum ActivityType {
+  call
+  email
+  meeting
+  task
+  note
+}
+
+enum RelatedToType {
+  contact
+  company
+  deal
+}
+
+enum DealStage {
+  prospect
+  qualification
+  proposal
+  negotiation
+  closed_won
+  closed_lost
+}
