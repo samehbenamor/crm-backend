@@ -78,4 +78,21 @@ export class ActivitiesService {
       throw error;
     }
   }
+
+  async complete(id: string): Promise<any> {
+    try {
+      return await this.prisma.activity.update({
+        where: { id },
+        data: {
+          completed: true,  // Assuming you have a 'completed' boolean field in your Activity model
+          completed_at: new Date(),  // Optional: if you want to track when it was completed
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Activity with ID ${id} not found`);
+      }
+      throw error;
+    }
+  }
 }

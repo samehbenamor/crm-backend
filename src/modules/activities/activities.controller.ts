@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Patch, UseGuards } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -42,5 +42,11 @@ export class ActivitiesController {
   @UseGuards(SupabaseAuthGuard)
   remove(@Param('id') id: string) {
     return this.activitiesService.remove(id);
+  }
+  
+  @Patch(':id/complete')
+  @UseGuards(SupabaseAuthGuard)
+  complete(@Param('id') id: string) {
+    return this.activitiesService.complete(id);
   }
 }

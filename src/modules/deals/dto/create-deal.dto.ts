@@ -1,3 +1,4 @@
+// src/deals/dto/create-deal.dto.ts
 import { 
   IsString, IsOptional, IsNumber, IsDate, IsIn, IsNotEmpty, Min, Max 
 } from 'class-validator';
@@ -41,4 +42,9 @@ export class CreateDealDto {
   @IsString()
   @IsOptional()
   contact_id?: string;
+
+  // Add owner_id to the DTO (optional since we'll get it from the user decorator)
+  @IsString()
+  @IsOptional()
+  owner_id?: string;
 }
