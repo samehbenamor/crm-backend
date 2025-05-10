@@ -2,14 +2,16 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
-import { CompaniesModule } from './modules/companies/companies.module';
-import { DealsModule } from './modules/deals/deals.module';
-import { ActivitiesModule } from './modules/activities/activities.module';
-import { ContactsModule } from './modules/contacts/contacts.module';
+
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import configuration from './config/configuration';
 
+import { BusinessModule } from './modules/business/business.module';
+import { FollowModule } from './modules/follow/follow.module';
+import { PostModule } from './modules/post/post.module';
+import { ClientModule } from './modules/client/client.module';
+import { BusinessOwnerModule } from './modules/business-owner/business-owner.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -17,10 +19,11 @@ import configuration from './config/configuration';
       load: [configuration],
     }),
     AuthModule,
-    CompaniesModule,
-    DealsModule,
-    ActivitiesModule,
-    ContactsModule,
+    BusinessModule,
+    FollowModule,
+    ClientModule,
+    BusinessOwnerModule,
+    PostModule,
     PrismaModule,
   ],
   controllers: [],
@@ -29,6 +32,6 @@ import configuration from './config/configuration';
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
     },
-  ], // Add PrismaService to providers
+  ],
 })
 export class AppModule {}
