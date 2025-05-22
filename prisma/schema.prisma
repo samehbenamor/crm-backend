@@ -23,17 +23,31 @@ model BusinessOwner {
 
 model Client {
   id                      String   @id @default(uuid())
+  firstName               String
+  lastName                String
+  phoneNumber             String
+  referralCode            String?
   displayName             String
   interests               String[]
   location                String?
+  followingCount          Int      @default(0)
   notificationPreferences Json?
-  userId                  String // References auth.users in Supabase
+  userId                  String   @unique // Changed to unique reference
   created_at              DateTime @default(now())
   updated_at              DateTime @updatedAt
 
   @@index([userId])
 }
-
+model ClientOnboarding {
+  id          String   @id @default(uuid())
+  userId      String   @unique  // References Supabase auth.users.id
+  appUsage    String[]
+  discovery   String
+  interests   String[]
+  customDiscovery String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 model Business {
   id             String   @id @default(uuid())
   ownerId        String

@@ -10,7 +10,7 @@ import { User } from '../../common/interfaces/user.interface';
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
-  @Post()
+  /*@Post()
   @UseGuards(SupabaseAuthGuard)
   create(
     @Body() dto: CreateClientDto,
@@ -18,7 +18,7 @@ export class ClientController {
     @GetAccessToken() accessToken: string
   ) {
     return this.clientService.create(dto, user.id, accessToken);
-  }
+  }*/
 
   @Get()
   @UseGuards(SupabaseAuthGuard)

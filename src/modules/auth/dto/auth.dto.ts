@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsPhoneNumber } from 'class-validator';
 
 export class ValidateTokenDto {
   @IsString()
@@ -23,10 +23,35 @@ export class LoginDto {
   password: string;
 }
 
-export class RegisterDto extends LoginDto {
+export class RegisterDto {
+  @IsEmail()
+  @IsNotEmpty({ message: 'Email is required' })
+  email: string;
+
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Password is required' })
+  @MinLength(6, { message: 'Password must be at least 6 characters' })
+  password: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Username is required' })
   username: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'First name is required' })
+  firstName: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Last name is required' })
+  lastName: string;
+
+  
+  @IsNotEmpty({ message: 'Phone number is required' })
+  phoneNumber: string;
+
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }
 
 export class ResendConfirmationDto {

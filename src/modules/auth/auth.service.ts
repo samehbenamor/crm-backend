@@ -1,12 +1,17 @@
-import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, Logger, ConflictException } from '@nestjs/common';
 import { SupabaseConfig } from '../../config/supabase.config';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
-
+import { ClientService } from '../client/client.service';
+import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   
-  constructor(private readonly supabaseConfig: SupabaseConfig) {}
+  constructor(
+    private readonly supabaseConfig: SupabaseConfig,
+    private readonly clientService: ClientService,
+    private readonly prisma: PrismaService
+  ) {}
 
   async validateToken(token: string) {
     const supabase = this.supabaseConfig.client;
@@ -66,62 +71,86 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
-    try {
-      const supabase = this.supabaseConfig.authClient;
-      
-      this.logger.log(`Attempting to register user with email: ${registerDto.email}`);
-      
-      // Create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: registerDto.email,
-        password: registerDto.password,
-        options: {
-          data: {
-            username: registerDto.username // Store the username in auth metadata
-          }
-        }
-      });
-
-      if (authError) {
-        this.logger.error(`Auth signup error: ${authError.message}`, authError);
+    return this.prisma.$transaction(async (prisma) => {
+      try {
+        const supabase = this.supabaseConfig.authClient;
         
-        // Log additional details for debugging
-        if (authError.status === 500 && authError.code === 'unexpected_failure') {
-          this.logger.error('This might be caused by a misconfiguration in Supabase or database constraints.');
+        // Check if email already exists
+        const { data: { user: existingUser } } = await supabase.auth.admin.getUserById(registerDto.email);
+        if (existingUser) {
+          throw new ConflictException('Email already registered');
         }
 
-        throw new BadRequestException(`Registration failed: ${authError.message}`);
-      }
+        // Create the user in Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: registerDto.email,
+          password: registerDto.password,
+          options: {
+            data: {
+              username: registerDto.username,
+              first_name: registerDto.firstName,
+              last_name: registerDto.lastName,
+            }
+          }
+        });
 
-      if (!authData || !authData.user) {
-        this.logger.error('Auth signup returned no user data');
-        throw new BadRequestException('Registration failed: No user data returned');
-      }
+        if (authError) {
+          this.logger.error(`Auth signup error: ${authError.message}`, authError);
+          throw new BadRequestException(`Registration failed: ${this.mapAuthError(authError)}`);
+        }
 
-      this.logger.log(`User registered successfully. User ID: ${authData.user.id}`);
-      
-      // Check if email confirmation is required
-      if (!authData.session) {
+        if (!authData?.user) {
+          this.logger.error('Auth signup returned no user data');
+          throw new BadRequestException('Registration failed: No user data returned');
+        }
+
+        // Create client profile
+        const clientProfile = await this.clientService.createWithTransaction({
+          firstName: registerDto.firstName,
+          lastName: registerDto.lastName,
+          phoneNumber: registerDto.phoneNumber,
+          referralCode: registerDto.referralCode,
+          displayName: `${registerDto.firstName} ${registerDto.lastName}`,
+          interests: []
+          
+        }, authData.user.id, prisma);
+
         return {
           user: authData.user,
-          session: null,
-          message: 'Registration successful! Please check your email to confirm your account before logging in.'
+          client: clientProfile,
+          session: authData.session,
         };
+      } catch (error) {
+        this.logger.error(`Registration error: ${error.message}`, error.stack);
+        
+        // Rethrow if it's already a NestJS exception
+        if (error instanceof BadRequestException || error instanceof ConflictException) {
+          throw error;
+        }
+        
+        throw new BadRequestException(this.mapRegistrationError(error));
       }
-      
-      return {
-        user: authData.user,
-        session: authData.session,
-      };
-    } catch (error) {
-      this.logger.error(`Registration error: ${error.message}`, error.stack);
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException(`Registration failed: ${error.message}`);
+    });
+  }
+   private mapAuthError(error: any): string {
+    if (error.message.includes('User already registered')) {
+      return 'Email already registered';
     }
+    if (error.message.includes('Password should be at least')) {
+      return 'Password does not meet requirements';
+    }
+    if (error.message.includes('Invalid email')) {
+      return 'Invalid email format';
+    }
+    return 'Registration failed due to authentication error';
   }
 
+  private mapRegistrationError(error: any): string {
+    if (error.code === 'P2002') { // Prisma unique constraint violation
+      return 'User information conflicts with existing records';
+    }
+    return 'Registration failed due to server error';
+  }
   async resendConfirmation(email: string) {
     try {
       const supabase = this.supabaseConfig.client;

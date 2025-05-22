@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Global } from '@nestjs/common';
 import { ConfigType } from './configuration';
 
 @Injectable()

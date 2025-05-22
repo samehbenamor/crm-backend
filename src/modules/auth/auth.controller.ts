@@ -23,8 +23,26 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+    try {
+      const result = await this.authService.register(registerDto);
+      return {
+        success: true,
+        data: {
+          user: result.user,
+          client: result.client,
+          session: result.session,
+        },
+        message: 'Registration successful',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.message || 'Registration failed',
+        error: error.response?.error || 'Internal server error',
+      };
+    }
   }
+
 
   @Post('resend-confirmation')
   async resendConfirmation(@Body() resendDto: ResendConfirmationDto) {

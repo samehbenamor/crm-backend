@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { SupabaseConfig } from '../../config/supabase.config';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ClientService {
@@ -11,19 +12,35 @@ export class ClientService {
     private readonly supabaseConfig: SupabaseConfig
   ) {}
 
-  async create(dto: CreateClientDto, userId: string, accessToken: string) {
-  const supabase = this.supabaseConfig.getClientWithUser(accessToken);
+  async createWithTransaction(
+    dto: CreateClientDto,
+    userId: string,
+    prisma: Prisma.TransactionClient
+  ) {
+    const { notificationPreferences, ...rest } = dto;
 
-  const { notificationPreferences, ...rest } = dto;
-
-  return this.prisma.client.create({
-    data: {
-      ...rest,
-      ...(notificationPreferences || {}), // flatten notification preferences if provided
-      userId,
-    },
-  });
-}
+    try {
+      return await prisma.client.create({
+        data: {
+          ...rest,
+          
+          interests: dto.interests || [],
+          notificationPreferences: notificationPreferences || {
+            emailNotifications: true,
+            pushNotifications: true,
+          },
+          userId,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new Error('Client profile already exists for this user');
+        }
+      }
+      throw error;
+    }
+  }
   async findAll() {
     return this.prisma.client.findMany();
   }

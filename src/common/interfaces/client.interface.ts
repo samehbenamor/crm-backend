@@ -1,9 +1,14 @@
+// interfaces/client.interface.ts
 export interface Client {
   userId: string; // references User.id
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  referralCode?: string;
   displayName: string;
-  interests: string[]; // e.g., ['fitness', 'tech', 'restaurants']
+  interests: string[];
   location?: string;
-  followingCount: number;
+  followingCount?: number;
   notificationPreferences?: {
     emailNotifications: boolean;
     pushNotifications: boolean;
