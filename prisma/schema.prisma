@@ -96,3 +96,15 @@ model Post {
 
   @@index([businessId])
 }
+model PasswordResetOtp {
+  id         String   @id @default(uuid())
+  userId     String   // References Supabase auth.users.id
+  email      String
+  code       String   // 4-digit code (stored hashed)
+  expiresAt  DateTime
+  isUsed     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+}

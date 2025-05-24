@@ -80,4 +80,9 @@ export class ClientService {
       throw error;
     }
   }
+  async findByUserId(userId: string) {
+  return this.prisma.client.findUnique({
+    where: { userId },
+  });
+}
 }

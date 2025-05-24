@@ -41,34 +41,43 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const supabase = this.supabaseConfig.client;
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginDto.email,
-      password: loginDto.password,
-    });
+  const supabase = this.supabaseConfig.client;
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: loginDto.email,
+    password: loginDto.password,
+  });
 
-    if (error) {
-      this.logger.error(`Login error: ${error.message}`, error);
-      
-      // Handle different error cases
-      if (error.message.includes('Email not confirmed')) {
-        throw new UnauthorizedException('Email not confirmed. Please check your inbox and confirm your email before logging in.');
-      } else if (error.message.includes('Invalid login credentials')) {
-        throw new UnauthorizedException('Invalid email or password');
-      } else {
-        throw new UnauthorizedException(`Login failed: ${error.message}`);
-      }
+  if (error) {
+    this.logger.error(`Login error: ${error.message}`, error);
+    
+    // Handle different error cases
+    if (error.message.includes('Email not confirmed')) {
+      throw new UnauthorizedException('Email not confirmed. Please check your inbox and confirm your email before logging in.');
+    } else if (error.message.includes('Invalid login credentials')) {
+      throw new UnauthorizedException('Invalid email or password');
+    } else {
+      throw new UnauthorizedException(`Login failed: ${error.message}`);
     }
-
-    if (!data.session) {
-      throw new UnauthorizedException('No session created. Email may not be confirmed.');
-    }
-
-    return {
-      user: data.user,
-      session: data.session,
-    };
   }
+
+  if (!data.session) {
+    throw new UnauthorizedException('No session created. Email may not be confirmed.');
+  }
+
+  // Get the client profile associated with this user
+  const client = await this.clientService.findByUserId(data.user.id);
+  if (!client) {
+    this.logger.warn(`No client profile found for user ${data.user.id}`);
+    // You might want to create one here if that makes sense for your flow
+    // Or just return null/undefined for the client
+  }
+
+  return {
+    user: data.user,
+    client, // Include the client profile in the response
+    session: data.session,
+  };
+}
 
   async register(registerDto: RegisterDto) {
     return this.prisma.$transaction(async (prisma) => {

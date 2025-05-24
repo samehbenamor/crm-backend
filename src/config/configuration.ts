@@ -4,7 +4,7 @@ export default () => ({
   supabase: {
     url: 'https://hwlkcotkmdmlnehiwamr.supabase.co',
     publicKey: process.env.SUPABASE_PUBLIC_KEY,
-    //serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    serviceKey: process.env.SUPABASE_SERVICE_KEY,
   },
 
   security: {
@@ -27,7 +27,7 @@ export interface ConfigType {
   supabase: {
     url: string;
     publicKey: string;
-    
+    serviceKey: string;
   };
   security: {
     cors: {

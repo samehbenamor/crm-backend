@@ -14,6 +14,7 @@ export class SupabaseConfig {
     this.supabase = createClient(
       this.configService.get('supabase.url', { infer: true })!,
       this.configService.get('supabase.publicKey', { infer: true })!,
+      
       {
         db: {
           schema: 'public' // Explicitly only use public schema
@@ -22,7 +23,7 @@ export class SupabaseConfig {
     );
     this.authSupabase = createClient(
       this.configService.get('supabase.url', { infer: true })!,
-      this.configService.get('supabase.publicKey', { infer: true })!,
+      this.configService.get('supabase.serviceKey', { infer: true })!,
       {
         db: {
           schema: 'auth'
