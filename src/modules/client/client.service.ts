@@ -4,18 +4,19 @@ import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { SupabaseConfig } from '../../config/supabase.config';
 import { Prisma } from '@prisma/client';
+import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Injectable()
 export class ClientService {
   constructor(
     private prisma: PrismaService,
-    private readonly supabaseConfig: SupabaseConfig
+    private readonly supabaseConfig: SupabaseConfig,
   ) {}
 
   async createWithTransaction(
     dto: CreateClientDto,
     userId: string,
-    prisma: Prisma.TransactionClient
+    prisma: Prisma.TransactionClient,
   ) {
     const { notificationPreferences, ...rest } = dto;
 
@@ -23,7 +24,7 @@ export class ClientService {
       return await prisma.client.create({
         data: {
           ...rest,
-          
+
           interests: dto.interests || [],
           notificationPreferences: notificationPreferences || {
             emailNotifications: true,
@@ -81,8 +82,36 @@ export class ClientService {
     }
   }
   async findByUserId(userId: string) {
-  return this.prisma.client.findUnique({
-    where: { userId },
-  });
+    return this.prisma.client.findUnique({
+      where: { userId },
+    });
+  }
+  async updateLocation(id: string, dto: UpdateLocationDto, userId: string) {
+  try {
+    // Verify the client belongs to the requesting user
+    const client = await this.prisma.client.findUnique({
+      where: { id, userId },
+    });
+    
+    if (!client) {
+      throw new NotFoundException(`Client ${id} not found or not owned by user`);
+    }
+
+    return await this.prisma.client.update({
+      where: { id },
+      data: {
+        location: {
+          name: dto.name,
+          lat: dto.lat,
+          lng: dto.lng,
+        },
+      },
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      throw new NotFoundException(`Client ${id} not found`);
+    }
+    throw error;
+  }
 }
 }

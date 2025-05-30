@@ -29,7 +29,7 @@ model Client {
   referralCode            String?
   displayName             String
   interests               String[]
-  location                String?
+  location                Json?    // Changed from String? to Json?
   followingCount          Int      @default(0)
   notificationPreferences Json?
   userId                  String   @unique // Changed to unique reference

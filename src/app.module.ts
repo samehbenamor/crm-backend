@@ -16,6 +16,8 @@ import { ClientModule } from './modules/client/client.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { BusinessOwnerModule } from './modules/business-owner/business-owner.module';
 import { OtpModule } from './modules/otp/otp.module';
+import { MailerModule } from './modules/mailer/mailer.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -31,6 +33,7 @@ import { OtpModule } from './modules/otp/otp.module';
     PostModule,
     OnboardingModule,
     OtpModule,
+    MailerModule,
     PrismaModule,
   ],
   controllers: [],

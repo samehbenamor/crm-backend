@@ -1,9 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
-import { GetUser, GetAccessToken } from '../../common/decorators/user.decorator';
+import {
+  GetUser,
+  GetAccessToken,
+} from '../../common/decorators/user.decorator';
 import { User } from '../../common/interfaces/user.interface';
 
 @Controller('clients')
@@ -42,5 +55,14 @@ export class ClientController {
   @UseGuards(SupabaseAuthGuard)
   remove(@Param('id') id: string) {
     return this.clientService.remove(id);
+  }
+  @Put(':id/location')
+  @UseGuards(SupabaseAuthGuard)
+  updateLocation(
+    @Param('id') id: string,
+    @Body() dto: UpdateLocationDto,
+    @GetUser() user: User,
+  ) {
+    return this.clientService.updateLocation(id, dto, user.id);
   }
 }
