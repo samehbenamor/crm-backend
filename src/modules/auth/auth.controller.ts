@@ -1,7 +1,15 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RefreshTokenDto, RegisterDto, ValidateTokenDto, ResendConfirmationDto } from './dto/auth.dto';
-
+import {
+  LoginDto,
+  RefreshTokenDto,
+  RegisterDto,
+  ValidateTokenDto,
+  ResendConfirmationDto,
+} from './dto/auth.dto';
+import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
+import { GetUser } from '../../common/decorators/user.decorator';
+import { User } from '../../common/interfaces/user.interface';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -43,6 +51,11 @@ export class AuthController {
     }
   }
 
+  @Get('me')
+  @UseGuards(SupabaseAuthGuard)
+  async getMe(@GetUser() user: User) {
+    return this.authService.getMe(user.id);
+  }
 
   @Post('resend-confirmation')
   async resendConfirmation(@Body() resendDto: ResendConfirmationDto) {

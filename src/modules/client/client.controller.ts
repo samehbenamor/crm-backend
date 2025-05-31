@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -64,5 +65,14 @@ export class ClientController {
     @GetUser() user: User,
   ) {
     return this.clientService.updateLocation(id, dto, user.id);
+  }
+    @Get(':id/nearby-businesses')
+  @UseGuards(SupabaseAuthGuard)
+  findNearbyBusinesses(
+    @Param('id') id: string,
+    @Query('radius') radius: string,
+  ) {
+    const radiusKm = radius ? parseFloat(radius) : 1; // Default 1km
+    return this.clientService.findNearbyBusinesses(id, radiusKm);
   }
 }

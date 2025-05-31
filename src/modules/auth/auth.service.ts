@@ -1,4 +1,11 @@
-import { Injectable, UnauthorizedException, BadRequestException, Logger, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  Logger,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { SupabaseConfig } from '../../config/supabase.config';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { ClientService } from '../client/client.service';
@@ -6,11 +13,11 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  
+
   constructor(
     private readonly supabaseConfig: SupabaseConfig,
     private readonly clientService: ClientService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
 
   async validateToken(token: string) {
@@ -41,88 +48,106 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-  const supabase = this.supabaseConfig.client;
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: loginDto.email,
-    password: loginDto.password,
-  });
+    const supabase = this.supabaseConfig.client;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginDto.email,
+      password: loginDto.password,
+    });
 
-  if (error) {
-    this.logger.error(`Login error: ${error.message}`, error);
-    
-    // Handle different error cases
-    if (error.message.includes('Email not confirmed')) {
-      throw new UnauthorizedException('Email not confirmed. Please check your inbox and confirm your email before logging in.');
-    } else if (error.message.includes('Invalid login credentials')) {
-      throw new UnauthorizedException('Invalid email or password');
-    } else {
-      throw new UnauthorizedException(`Login failed: ${error.message}`);
+    if (error) {
+      this.logger.error(`Login error: ${error.message}`, error);
+
+      // Handle different error cases
+      if (error.message.includes('Email not confirmed')) {
+        throw new UnauthorizedException(
+          'Email not confirmed. Please check your inbox and confirm your email before logging in.',
+        );
+      } else if (error.message.includes('Invalid login credentials')) {
+        throw new UnauthorizedException('Invalid email or password');
+      } else {
+        throw new UnauthorizedException(`Login failed: ${error.message}`);
+      }
     }
-  }
 
-  if (!data.session) {
-    throw new UnauthorizedException('No session created. Email may not be confirmed.');
-  }
+    if (!data.session) {
+      throw new UnauthorizedException(
+        'No session created. Email may not be confirmed.',
+      );
+    }
 
-  // Get the client profile associated with this user
-  const client = await this.clientService.findByUserId(data.user.id);
-  if (!client) {
-    this.logger.warn(`No client profile found for user ${data.user.id}`);
-    // You might want to create one here if that makes sense for your flow
-    // Or just return null/undefined for the client
-  }
+    // Get the client profile associated with this user
+    const client = await this.clientService.findByUserId(data.user.id);
+    if (!client) {
+      this.logger.warn(`No client profile found for user ${data.user.id}`);
+      // You might want to create one here if that makes sense for your flow
+      // Or just return null/undefined for the client
+    }
 
-  return {
-    user: data.user,
-    client, // Include the client profile in the response
-    session: data.session,
-  };
-}
+    return {
+      user: data.user,
+      client, // Include the client profile in the response
+      session: data.session,
+    };
+  }
 
   async register(registerDto: RegisterDto) {
     return this.prisma.$transaction(async (prisma) => {
       try {
         const supabase = this.supabaseConfig.authClient;
-        
+
         // Check if email already exists
-        const { data: { user: existingUser } } = await supabase.auth.admin.getUserById(registerDto.email);
+        const {
+          data: { user: existingUser },
+        } = await supabase.auth.admin.getUserById(registerDto.email);
         if (existingUser) {
           throw new ConflictException('Email already registered');
         }
 
         // Create the user in Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: registerDto.email,
-          password: registerDto.password,
-          options: {
-            data: {
-              username: registerDto.username,
-              first_name: registerDto.firstName,
-              last_name: registerDto.lastName,
-            }
-          }
-        });
+        const { data: authData, error: authError } = await supabase.auth.signUp(
+          {
+            email: registerDto.email,
+            password: registerDto.password,
+            options: {
+              data: {
+                username: registerDto.username,
+                first_name: registerDto.firstName,
+                last_name: registerDto.lastName,
+              },
+            },
+          },
+        );
 
         if (authError) {
-          this.logger.error(`Auth signup error: ${authError.message}`, authError);
-          throw new BadRequestException(`Registration failed: ${this.mapAuthError(authError)}`);
+          this.logger.error(
+            `Auth signup error: ${authError.message}`,
+            authError,
+          );
+          throw new BadRequestException(
+            `Registration failed: ${this.mapAuthError(authError)}`,
+          );
         }
 
         if (!authData?.user) {
           this.logger.error('Auth signup returned no user data');
-          throw new BadRequestException('Registration failed: No user data returned');
+          throw new BadRequestException(
+            'Registration failed: No user data returned',
+          );
         }
 
         // Create client profile
-        const clientProfile = await this.clientService.createWithTransaction({
-          firstName: registerDto.firstName,
-          lastName: registerDto.lastName,
-          phoneNumber: registerDto.phoneNumber,
-          referralCode: registerDto.referralCode,
-          displayName: `${registerDto.firstName} ${registerDto.lastName}`,
-          interests: []
-          
-        }, authData.user.id, prisma);
+        const clientProfile = await this.clientService.createWithTransaction(
+          {
+            firstName: registerDto.firstName,
+            lastName: registerDto.lastName,
+            phoneNumber: registerDto.phoneNumber,
+            referralCode: registerDto.referralCode,
+            displayName: `${registerDto.firstName} ${registerDto.lastName}`,
+            interests: [],
+          },
+          authData.user.id,
+          prisma,
+        );
 
         return {
           user: authData.user,
@@ -131,17 +156,20 @@ export class AuthService {
         };
       } catch (error) {
         this.logger.error(`Registration error: ${error.message}`, error.stack);
-        
+
         // Rethrow if it's already a NestJS exception
-        if (error instanceof BadRequestException || error instanceof ConflictException) {
+        if (
+          error instanceof BadRequestException ||
+          error instanceof ConflictException
+        ) {
           throw error;
         }
-        
+
         throw new BadRequestException(this.mapRegistrationError(error));
       }
     });
   }
-   private mapAuthError(error: any): string {
+  private mapAuthError(error: any): string {
     if (error.message.includes('User already registered')) {
       return 'Email already registered';
     }
@@ -155,7 +183,8 @@ export class AuthService {
   }
 
   private mapRegistrationError(error: any): string {
-    if (error.code === 'P2002') { // Prisma unique constraint violation
+    if (error.code === 'P2002') {
+      // Prisma unique constraint violation
       return 'User information conflicts with existing records';
     }
     return 'Registration failed due to server error';
@@ -163,9 +192,9 @@ export class AuthService {
   async resendConfirmation(email: string) {
     try {
       const supabase = this.supabaseConfig.client;
-      
+
       this.logger.log(`Resending confirmation email to: ${email}`);
-      
+
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
@@ -173,7 +202,9 @@ export class AuthService {
 
       if (error) {
         this.logger.error(`Resend confirmation error: ${error.message}`, error);
-        throw new BadRequestException(`Failed to resend confirmation: ${error.message}`);
+        throw new BadRequestException(
+          `Failed to resend confirmation: ${error.message}`,
+        );
       }
 
       return {
@@ -181,11 +212,43 @@ export class AuthService {
         message: 'Confirmation email has been resent. Please check your inbox.',
       };
     } catch (error) {
-      this.logger.error(`Resend confirmation error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Resend confirmation error: ${error.message}`,
+        error.stack,
+      );
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException(`Failed to resend confirmation: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to resend confirmation: ${error.message}`,
+      );
     }
   }
+async getMe(userId: string) {
+  // Get user from the JWT token (already validated by SupabaseAuthGuard)
+  const supabase = this.supabaseConfig.client;
+  
+  // Use the regular getUser method instead of admin.getUserById
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    throw new UnauthorizedException('User not found');
+  }
+
+  // Verify the user ID matches the token
+  if (user.id !== userId) {
+    throw new UnauthorizedException('User ID mismatch');
+  }
+
+  // Get client profile
+  const client = await this.clientService.findByUserId(userId);
+  if (!client) {
+    throw new NotFoundException('Client profile not found');
+  }
+
+  return {
+    user,
+    client
+  };
+}
 }
