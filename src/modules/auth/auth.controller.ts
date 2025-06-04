@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards, Get } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Get, Put } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   LoginDto,
@@ -60,5 +60,18 @@ export class AuthController {
   @Post('resend-confirmation')
   async resendConfirmation(@Body() resendDto: ResendConfirmationDto) {
     return this.authService.resendConfirmation(resendDto.email);
+  }
+  @Put('change-password')
+  @UseGuards(SupabaseAuthGuard)
+  async changePassword(
+    @Body() dto: { oldPassword: string; newPassword: string },
+    @GetUser() user: User,
+  ) {
+    return this.authService.changePassword(
+      user.id,
+      dto.oldPassword,
+      dto.newPassword,
+      user.email, // Pass the email from the authenticated user
+    );
   }
 }

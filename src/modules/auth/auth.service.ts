@@ -224,31 +224,65 @@ export class AuthService {
       );
     }
   }
-async getMe(userId: string) {
-  // Get user from the JWT token (already validated by SupabaseAuthGuard)
+  async getMe(userId: string) {
+    // Get user from the JWT token (already validated by SupabaseAuthGuard)
+    const supabase = this.supabaseConfig.client;
+
+    // Use the regular getUser method instead of admin.getUserById
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify the user ID matches the token
+    if (user.id !== userId) {
+      throw new UnauthorizedException('User ID mismatch');
+    }
+
+    // Get client profile
+    const client = await this.clientService.findByUserId(userId);
+    if (!client) {
+      throw new NotFoundException('Client profile not found');
+    }
+
+    return {
+      user,
+      client,
+    };
+  }
+  async changePassword(
+  userId: string,
+  oldPassword: string,
+  newPassword: string,
+  userEmail: string // Add this parameter
+) {
   const supabase = this.supabaseConfig.client;
+
+  // First verify old password by signing in
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: userEmail, // Use the email from the parameter
+    password: oldPassword,
+  });
   
-  // Use the regular getUser method instead of admin.getUserById
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (error || !user) {
-    throw new UnauthorizedException('User not found');
+  if (signInError) {
+    throw new UnauthorizedException('Old password is incorrect');
   }
 
-  // Verify the user ID matches the token
-  if (user.id !== userId) {
-    throw new UnauthorizedException('User ID mismatch');
+  // Update password
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) {
+    throw new BadRequestException(
+      `Password update failed: ${updateError.message}`,
+    );
   }
 
-  // Get client profile
-  const client = await this.clientService.findByUserId(userId);
-  if (!client) {
-    throw new NotFoundException('Client profile not found');
-  }
-
-  return {
-    user,
-    client
-  };
+  return { success: true, message: 'Password updated successfully' };
 }
 }

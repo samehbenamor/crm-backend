@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -117,68 +117,98 @@ export class ClientService {
       }
       throw error;
     }
-  }async findNearbyBusinesses(clientId: string, radiusKm: number = 1) {
-  const client = await this.prisma.client.findUnique({
-    where: { id: clientId },
-    select: { location: true },
-  });
-
-  if (!client) {
-    throw new NotFoundException(`Client ${clientId} not found`);
   }
+  async findNearbyBusinesses(clientId: string, radiusKm: number = 1) {
+    const client = await this.prisma.client.findUnique({
+      where: { id: clientId },
+      select: { location: true },
+    });
 
-  function isGeoLocation(obj: any): obj is { lat: number; lng: number } {
-    return (
-      obj &&
-      typeof obj === 'object' &&
-      typeof obj.lat === 'number' &&
-      typeof obj.lng === 'number'
-    );
-  }
+    if (!client) {
+      throw new NotFoundException(`Client ${clientId} not found`);
+    }
 
-  if (!isGeoLocation(client.location)) {
-    throw new NotFoundException(`Client ${clientId} has no valid location data`);
-  }
-
-  const clientLat = client.location.lat;
-  const clientLng = client.location.lng;
-
-  const allBusinesses = await this.prisma.business.findMany({
-    where: {
-      lat: { not: null },
-      lng: { not: null },
-    },
-  });
-
-  const nearbyBusinesses = allBusinesses
-    .filter((business) => {
-      if (business.lat == null || business.lng == null) return false;
-
-      const distance = this.geospatialService.calculateDistance(
-        clientLat,
-        clientLng,
-        business.lat,
-        business.lng,
+    function isGeoLocation(obj: any): obj is { lat: number; lng: number } {
+      return (
+        obj &&
+        typeof obj === 'object' &&
+        typeof obj.lat === 'number' &&
+        typeof obj.lng === 'number'
       );
+    }
 
-      return distance <= radiusKm;
-    })
-    .map((business) => {
-      const distance = this.geospatialService.calculateDistance(
-        clientLat,
-        clientLng,
-        business.lat!,
-        business.lng!,
+    if (!isGeoLocation(client.location)) {
+      throw new NotFoundException(
+        `Client ${clientId} has no valid location data`,
       );
+    }
 
-      return {
-        ...business,
-        distance: Math.round(distance * 1000), // meters
-      };
-    })
-    .sort((a, b) => a.distance - b.distance);
+    const clientLat = client.location.lat;
+    const clientLng = client.location.lng;
 
-  return nearbyBusinesses;
-}
+    const allBusinesses = await this.prisma.business.findMany({
+      where: {
+        lat: { not: null },
+        lng: { not: null },
+      },
+    });
 
+    const nearbyBusinesses = allBusinesses
+      .filter((business) => {
+        if (business.lat == null || business.lng == null) return false;
+
+        const distance = this.geospatialService.calculateDistance(
+          clientLat,
+          clientLng,
+          business.lat,
+          business.lng,
+        );
+
+        return distance <= radiusKm;
+      })
+      .map((business) => {
+        const distance = this.geospatialService.calculateDistance(
+          clientLat,
+          clientLng,
+          business.lat!,
+          business.lng!,
+        );
+
+        return {
+          ...business,
+          distance: Math.round(distance * 1000), // meters
+        };
+      })
+      .sort((a, b) => a.distance - b.distance);
+
+    return nearbyBusinesses;
+  }
+  async updatePhoneNumber(
+    clientId: string,
+    phoneNumber: string,
+    userId: string,
+  ) {
+    // Verify the client belongs to the requesting user
+    const client = await this.prisma.client.findUnique({
+      where: { id: clientId, userId },
+    });
+
+    if (!client) {
+      throw new NotFoundException(
+        `Client ${clientId} not found or not owned by user`,
+      );
+    }
+
+    try {
+      return await this.prisma.client.update({
+        where: { id: clientId },
+        data: { phoneNumber },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('Phone number already in use');
+      }
+      throw error;
+    }
+  }
 }

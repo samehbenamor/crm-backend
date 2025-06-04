@@ -75,4 +75,13 @@ export class ClientController {
     const radiusKm = radius ? parseFloat(radius) : 1; // Default 1km
     return this.clientService.findNearbyBusinesses(id, radiusKm);
   }
+  @Put(':id/phone-number')
+@UseGuards(SupabaseAuthGuard)
+async updatePhoneNumber(
+  @Param('id') id: string,
+  @Body() dto: { phoneNumber: string },
+  @GetUser() user: User,
+) {
+  return this.clientService.updatePhoneNumber(id, dto.phoneNumber, user.id);
+}
 }
