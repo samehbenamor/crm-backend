@@ -17,6 +17,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { BusinessOwnerModule } from './modules/business-owner/business-owner.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { MailerModule } from './modules/mailer/mailer.module';
+import { FidelityModule } from './modules/fidelity/fidelity.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MailerModule } from './modules/mailer/mailer.module';
     OnboardingModule,
     OtpModule,
     MailerModule,
+    FidelityModule,
     PrismaModule,
   ],
   controllers: [],

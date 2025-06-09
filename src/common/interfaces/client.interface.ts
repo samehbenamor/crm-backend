@@ -1,4 +1,5 @@
 // interfaces/client.interface.ts
+import { PointsWallet } from './fidelity.interface';
 export interface Client {
   userId: string; // references User.id
   firstName: string;
@@ -17,6 +18,7 @@ export interface Client {
     emailNotifications: boolean;
     pushNotifications: boolean;
   };
+  pointsWallets?: PointsWallet[]; // Add this line
   createdAt: string;
   updatedAt?: string;
 }

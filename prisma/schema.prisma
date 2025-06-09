@@ -22,34 +22,37 @@ model BusinessOwner {
 }
 
 model Client {
-  id                      String   @id @default(uuid())
+  id                      String         @id @default(uuid())
   firstName               String
   lastName                String
   phoneNumber             String
   referralCode            String?
   displayName             String
   interests               String[]
-  location                Json?    // Changed from String? to Json?
-  followingCount          Int      @default(0)
+  location                Json? // Changed from String? to Json?
+  followingCount          Int            @default(0)
   notificationPreferences Json?
-  userId                  String   @unique // Changed to unique reference
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
+  userId                  String         @unique
+  created_at              DateTime       @default(now())
+  updated_at              DateTime       @updatedAt
+  pointsWallets           PointsWallet[] // Add this line
 
   @@index([userId])
 }
+
 model ClientOnboarding {
-  id          String   @id @default(uuid())
-  userId      String   @unique  // References Supabase auth.users.id
-  appUsage    String[]
-  discovery   String
-  interests   String[]
+  id              String   @id @default(uuid())
+  userId          String   @unique // References Supabase auth.users.id
+  appUsage        String[]
+  discovery       String
+  interests       String[]
   customDiscovery String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
+
 model Business {
-  id             String   @id @default(uuid())
+  id             String         @id @default(uuid())
   ownerId        String
   name           String
   description    String
@@ -62,11 +65,12 @@ model Business {
   lng            Float?
   logoUrl        String?
   coverPhotoUrl  String?
-  isVerified     Boolean  @default(false)
-  followersCount Int      @default(0)
-  postsCount     Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isVerified     Boolean        @default(false)
+  followersCount Int            @default(0)
+  postsCount     Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  PointsWallet   PointsWallet[]
 
   @@index([ownerId])
 }
@@ -96,15 +100,51 @@ model Post {
 
   @@index([businessId])
 }
+
 model PasswordResetOtp {
-  id         String   @id @default(uuid())
-  userId     String   // References Supabase auth.users.id
-  email      String
-  code       String   // 4-digit code (stored hashed)
-  expiresAt  DateTime
-  isUsed     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  userId    String // References Supabase auth.users.id
+  email     String
+  code      String // 4-digit code (stored hashed)
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([email])
+}
+
+model PointsWallet {
+  id          String   @id @default(uuid())
+  clientId    String
+  businessId  String
+  points      Int      @default(0)
+  lastUpdated DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client       Client              @relation(fields: [clientId], references: [id])
+  business     Business            @relation(fields: [businessId], references: [id])
+  transactions PointsTransaction[]
+
+  @@unique([clientId, businessId])
+  @@index([clientId])
+  @@index([businessId])
+}
+
+model PointsTransaction {
+  id          String    @id @default(uuid())
+  walletId    String
+  points      Int
+  type        String // EARNED, SPENT, ADJUSTMENT, EXPIRATION
+  description String
+  referenceId String?
+  expiresAt   DateTime?
+  expired     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  wallet PointsWallet @relation(fields: [walletId], references: [id])
+
+  @@index([walletId])
+  @@index([referenceId])
 }
