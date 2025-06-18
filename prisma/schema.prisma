@@ -71,6 +71,7 @@ model Business {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   PointsWallet   PointsWallet[]
+  Promotion      Promotion[]
 
   @@index([ownerId])
 }
@@ -123,9 +124,10 @@ model PointsWallet {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  client       Client              @relation(fields: [clientId], references: [id])
-  business     Business            @relation(fields: [businessId], references: [id])
-  transactions PointsTransaction[]
+  client              Client                @relation(fields: [clientId], references: [id])
+  business            Business              @relation(fields: [businessId], references: [id])
+  transactions        PointsTransaction[]
+  PromotionRedemption PromotionRedemption[]
 
   @@unique([clientId, businessId])
   @@index([clientId])
@@ -147,4 +149,33 @@ model PointsTransaction {
 
   @@index([walletId])
   @@index([referenceId])
+}
+
+model Promotion {
+  id          String   @id @default(uuid())
+  businessId  String
+  name        String
+  description String
+  pointsCost  Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business    Business              @relation(fields: [businessId], references: [id])
+  redemptions PromotionRedemption[]
+
+  @@index([businessId])
+}
+
+model PromotionRedemption {
+  id          String   @id @default(uuid())
+  promotionId String
+  walletId    String
+  redeemedAt  DateTime @default(now())
+
+  promotion Promotion    @relation(fields: [promotionId], references: [id])
+  wallet    PointsWallet @relation(fields: [walletId], references: [id])
+
+  @@index([promotionId])
+  @@index([walletId])
 }
