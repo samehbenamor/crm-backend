@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsNumber, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { LocationDto } from './location.dto';
 
 export class CreateBusinessDto {
   @IsString()
@@ -13,24 +21,10 @@ export class CreateBusinessDto {
   @IsNotEmpty()
   category: string;
 
-  @IsObject()
   @IsOptional()
-  location?: {
-    address?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    lat?: number;
-    lng?: number;
-  };
-
-  @IsString()
-  @IsOptional()
-  logoUrl?: string;
-
-  @IsString()
-  @IsOptional()
-  coverPhotoUrl?: string;
+  @ValidateNested()
+  @Type(() => LocationDto)
+  location?: LocationDto;
 
   @IsBoolean()
   isVerified: boolean;

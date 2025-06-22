@@ -3,7 +3,8 @@ import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigType } from './config/configuration';
-
+import * as express from 'express';
+import { join } from 'path';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
@@ -39,7 +40,7 @@ async function bootstrap() {
 
   // ─── Routing ────────────────────────────────────────────────────────────────
   app.setGlobalPrefix('api');
-
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
   // ─── Start server ────────────────────────────────────────────────────────────
   await app.listen(port, '0.0.0.0'); // bind to ALL interfaces once
 
