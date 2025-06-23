@@ -10,6 +10,10 @@ import { SupabaseConfig } from '../../config/supabase.config';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { ClientService } from '../client/client.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterBusinessOwnerDto } from './dto/register-business-owner.dto';
+import { BusinessOwnerService } from '../business-owner/business-owner.service';
+import { LoginBusinessOwnerDto } from './dto/login-business-owner.dto';
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -18,6 +22,7 @@ export class AuthService {
     private readonly supabaseConfig: SupabaseConfig,
     private readonly clientService: ClientService,
     private readonly prisma: PrismaService,
+    private readonly businessOwnerService: BusinessOwnerService,
   ) {}
 
   async validateToken(token: string) {
@@ -169,6 +174,80 @@ export class AuthService {
       }
     });
   }
+  async registerBusinessOwner(registerDto: RegisterBusinessOwnerDto) {
+    return this.prisma.$transaction(async (prisma) => {
+      try {
+        const supabase = this.supabaseConfig.authClient;
+
+        // Check if email already exists
+        const {
+          data: { user: existingUser },
+        } = await supabase.auth.admin.getUserById(registerDto.email);
+        if (existingUser) {
+          throw new ConflictException('Email already registered');
+        }
+
+        // Create the user in Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.signUp(
+          {
+            email: registerDto.email,
+            password: registerDto.password,
+            options: {
+              data: {
+                username: registerDto.username,
+              },
+            },
+          },
+        );
+
+        if (authError) {
+          this.logger.error(
+            `Auth signup error: ${authError.message}`,
+            authError,
+          );
+          throw new BadRequestException(
+            `Registration failed: ${this.mapAuthError(authError)}`,
+          );
+        }
+
+        if (!authData?.user) {
+          this.logger.error('Auth signup returned no user data');
+          throw new BadRequestException(
+            'Registration failed: No user data returned',
+          );
+        }
+
+        // Create business owner profile
+        const businessOwner =
+          await this.businessOwnerService.createWithTransaction(
+            {
+              displayName: registerDto.displayName,
+              phoneNumber: registerDto.phoneNumber,
+              //businessCount: 0, // Initialize with 0 businesses
+            },
+            authData.user.id,
+            prisma,
+          );
+
+        return {
+          user: authData.user,
+          businessOwner,
+          session: authData.session,
+        };
+      } catch (error) {
+        this.logger.error(`Registration error: ${error.message}`, error.stack);
+
+        if (
+          error instanceof BadRequestException ||
+          error instanceof ConflictException
+        ) {
+          throw error;
+        }
+
+        throw new BadRequestException(this.mapRegistrationError(error));
+      }
+    });
+  }
   private mapAuthError(error: any): string {
     if (error.message.includes('User already registered')) {
       return 'Email already registered';
@@ -255,34 +334,70 @@ export class AuthService {
     };
   }
   async changePassword(
-  userId: string,
-  oldPassword: string,
-  newPassword: string,
-  userEmail: string // Add this parameter
-) {
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+    userEmail: string, // Add this parameter
+  ) {
+    const supabase = this.supabaseConfig.client;
+
+    // First verify old password by signing in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userEmail, // Use the email from the parameter
+      password: oldPassword,
+    });
+
+    if (signInError) {
+      throw new UnauthorizedException('Old password is incorrect');
+    }
+
+    // Update password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      throw new BadRequestException(
+        `Password update failed: ${updateError.message}`,
+      );
+    }
+
+    return { success: true, message: 'Password updated successfully' };
+  }
+  async loginBusinessOwner(loginDto: LoginBusinessOwnerDto) {
   const supabase = this.supabaseConfig.client;
-
-  // First verify old password by signing in
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: userEmail, // Use the email from the parameter
-    password: oldPassword,
-  });
-  
-  if (signInError) {
-    throw new UnauthorizedException('Old password is incorrect');
-  }
-
-  // Update password
-  const { error: updateError } = await supabase.auth.updateUser({
-    password: newPassword,
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: loginDto.email,
+    password: loginDto.password,
   });
 
-  if (updateError) {
-    throw new BadRequestException(
-      `Password update failed: ${updateError.message}`,
-    );
+  if (error) {
+    this.logger.error(`Business owner login error: ${error.message}`, error);
+    
+    if (error.message.includes('Email not confirmed')) {
+      throw new UnauthorizedException(
+        'Email not confirmed. Please check your inbox.',
+      );
+    } else if (error.message.includes('Invalid login credentials')) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+    throw new UnauthorizedException(`Login failed: ${error.message}`);
   }
 
-  return { success: true, message: 'Password updated successfully' };
+  if (!data.session) {
+    throw new UnauthorizedException('No session created');
+  }
+
+  // Get the business owner profile
+  const businessOwner = await this.businessOwnerService.findByUserId(data.user.id);
+  if (!businessOwner) {
+    throw new NotFoundException('Business owner profile not found');
+  }
+
+  return {
+    user: data.user,
+    businessOwner,
+    session: data.session,
+  };
 }
 }

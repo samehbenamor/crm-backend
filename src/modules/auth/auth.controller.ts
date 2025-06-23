@@ -10,6 +10,9 @@ import {
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
 import { GetUser } from '../../common/decorators/user.decorator';
 import { User } from '../../common/interfaces/user.interface';
+import { RegisterBusinessOwnerDto } from './dto/register-business-owner.dto';
+import { LoginBusinessOwnerDto } from './dto/login-business-owner.dto';
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -50,7 +53,27 @@ export class AuthController {
       };
     }
   }
-
+  @Post('register/business-owner')
+  async registerBusinessOwner(@Body() registerDto: RegisterBusinessOwnerDto) {
+    try {
+      const result = await this.authService.registerBusinessOwner(registerDto);
+      return {
+        success: true,
+        data: {
+          user: result.user,
+          businessOwner: result.businessOwner,
+          session: result.session,
+        },
+        message: 'Business owner registration successful',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.message || 'Registration failed',
+        error: error.response?.error || 'Internal server error',
+      };
+    }
+  }
   @Get('me')
   @UseGuards(SupabaseAuthGuard)
   async getMe(@GetUser() user: User) {
@@ -74,4 +97,8 @@ export class AuthController {
       user.email, // Pass the email from the authenticated user
     );
   }
+  @Post('login/business-owner')
+async loginBusinessOwner(@Body() loginDto: LoginBusinessOwnerDto) {
+  return this.authService.loginBusinessOwner(loginDto);
+}
 }

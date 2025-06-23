@@ -3,15 +3,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateBusinessOwnerDto } from './dto/create-business-owner.dto';
 import { UpdateBusinessOwnerDto } from './dto/update-business-owner.dto';
 import { SupabaseConfig } from '../../config/supabase.config';
-
+import { Prisma } from '@prisma/client';
 @Injectable()
 export class BusinessOwnerService {
   constructor(
     private prisma: PrismaService,
-    private readonly supabaseConfig: SupabaseConfig
+    private readonly supabaseConfig: SupabaseConfig,
   ) {}
 
-  async create(dto: CreateBusinessOwnerDto, userId: string, accessToken: string) {
+  async create(
+    dto: CreateBusinessOwnerDto,
+    userId: string,
+    accessToken: string,
+  ) {
     const supabase = this.supabaseConfig.getClientWithUser(accessToken);
 
     return this.prisma.businessOwner.create({
@@ -61,4 +65,25 @@ export class BusinessOwnerService {
       throw error;
     }
   }
+  async createWithTransaction(
+    dto: CreateBusinessOwnerDto,
+    userId: string,
+    prisma: Prisma.TransactionClient,
+  ) {
+    return prisma.businessOwner.create({
+      data: {
+        ...dto,
+        userId,
+      },
+    });
+  }
+  async findByUserId(userId: string) {
+  const owner = await this.prisma.businessOwner.findUnique({
+    where: {
+      userId: userId  // Now this works because userId is marked as @unique
+    }
+  });
+  if (!owner) throw new NotFoundException('Business owner not found');
+  return owner;
+}
 }

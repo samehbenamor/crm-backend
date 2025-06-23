@@ -12,9 +12,10 @@ model BusinessOwner {
   id          String   @id @default(uuid())
   displayName String
   phoneNumber String?
+  businessCount Int     @default(0)
   bio         String?
   website     String?
-  userId      String // References auth.users in Supabase
+  userId      String   @unique // Add @unique here
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
