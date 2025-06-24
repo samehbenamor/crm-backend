@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
@@ -8,12 +8,14 @@ import { existsSync, mkdirSync } from 'fs';
 import { moveSync } from 'fs-extra';
 import { v4 as uuidv4 } from 'uuid';
 import { Business } from '../../common/interfaces/business.interface';
+import { BusinessOwnerService } from '../business-owner/business-owner.service';
 
 @Injectable()
 export class BusinessService {
   constructor(
     private prisma: PrismaService,
     private readonly supabaseConfig: SupabaseConfig,
+    private readonly businessOwnerService: BusinessOwnerService,
   ) {}
 
   private toBusinessInterface(business: any): Business {
@@ -92,14 +94,26 @@ export class BusinessService {
 
   async create(
     dto: CreateBusinessDto,
-    ownerId: string,
+    userId: string,
     accessToken: string,
     profileImage?: Express.Multer.File,
     coverImage?: Express.Multer.File,
   ): Promise<Business> {
+    // First, find the business owner associated with this user
+    let businessOwner: { id: string; displayName: string; phoneNumber: string | null; businessCount: number; bio: string | null; website: string | null; userId: string; created_at: Date; updated_at: Date; };
+    try {
+      businessOwner = await this.businessOwnerService.findByUserId(userId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new ForbiddenException('User is not registered as a business owner');
+      }
+      throw error;
+    }
+
     const supabase = this.supabaseConfig.getClientWithUser(accessToken);
     const { location, ...rest } = dto;
 
+    // Create the business with the business owner's ID
     const business = await this.prisma.business.create({
       data: {
         ...rest,
@@ -109,7 +123,7 @@ export class BusinessService {
         country: location?.country,
         lat: location?.lat ?? null,
         lng: location?.lng ?? null,
-        ownerId,
+        ownerId: businessOwner.id, // Use the business owner's ID instead of user ID
         followersCount: 0,
         postsCount: 0,
       },
@@ -203,4 +217,10 @@ export class BusinessService {
       throw error;
     }
   }
+  async findByOwner(ownerId: string): Promise<Business[]> {
+  const businesses = await this.prisma.business.findMany({
+    where: { ownerId },
+  });
+  return businesses.map((business) => this.toBusinessInterface(business));
+}
 }

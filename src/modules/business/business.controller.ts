@@ -93,4 +93,10 @@ export class BusinessController {
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     return this.businessService.remove(id);
   }
+
+  @Get('owner/:ownerId')
+@UseGuards(SupabaseAuthGuard)
+async findByOwner(@Param('ownerId') ownerId: string): Promise<Business[]> {
+  return this.businessService.findByOwner(ownerId);
+}
 }
