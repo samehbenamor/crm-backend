@@ -7,12 +7,10 @@ import { UpdateFollowDto } from './dto/update-follow.dto';
 export class FollowService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateFollowDto, clientId: string) {
+  async create(dto: CreateFollowDto) {
+    // Remove clientId parameter
     return this.prisma.follow.create({
-      data: {
-        ...dto,
-        clientId,
-      },
+      data: dto, // Just use the DTO directly
     });
   }
 
@@ -50,5 +48,43 @@ export class FollowService {
       }
       throw error;
     }
+  }
+  async isFollowing(clientId: string, businessId: string): Promise<boolean> {
+    const follow = await this.prisma.follow.findFirst({
+      where: {
+        clientId,
+        businessId,
+      },
+    });
+    return !!follow; // Returns true if follow exists, false otherwise
+  }
+  async findFollowersByBusinessId(businessId: string) {
+    return this.prisma.follow.findMany({
+      where: { businessId },
+      include: {
+        client: true, // Include full client information
+      },
+      orderBy: {
+        followedAt: 'desc', // Order by most recent first
+      },
+    });
+  }
+
+  async getBusinessFollowCount(businessId: string) {
+    return this.prisma.follow.count({
+      where: { businessId },
+    });
+  }
+
+  async getLatestBusinessFollower(businessId: string) {
+    return this.prisma.follow.findFirst({
+      where: { businessId },
+      include: {
+        client: true,
+      },
+      orderBy: {
+        followedAt: 'desc',
+      },
+    });
   }
 }

@@ -30,13 +30,14 @@ model Client {
   referralCode            String?
   displayName             String
   interests               String[]
-  location                Json? // Changed from String? to Json?
+  location                Json?
   followingCount          Int            @default(0)
   notificationPreferences Json?
   userId                  String         @unique
   created_at              DateTime       @default(now())
   updated_at              DateTime       @updatedAt
-  pointsWallets           PointsWallet[] // Add this line
+  pointsWallets           PointsWallet[]
+  follows                 Follow[]       // Add this relation
 
   @@index([userId])
 }
@@ -73,7 +74,7 @@ model Business {
   updatedAt      DateTime       @updatedAt
   PointsWallet   PointsWallet[]
   Promotion      Promotion[]
-
+  followers  Follow[] // Add this relation
   @@index([ownerId])
 }
 
@@ -84,9 +85,15 @@ model Follow {
   followedAt           DateTime @default(now())
   notificationsEnabled Boolean  @default(false)
 
+  // Add these relations
+  client   Client   @relation(fields: [clientId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+
   @@index([clientId])
   @@index([businessId])
+  @@unique([clientId, businessId]) // Prevent duplicate follows
 }
+
 
 model Post {
   id            String   @id @default(uuid())

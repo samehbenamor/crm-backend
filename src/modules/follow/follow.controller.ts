@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { FollowService } from './follow.service';
 import { CreateFollowDto } from './dto/create-follow.dto';
 import { UpdateFollowDto } from './dto/update-follow.dto';
@@ -12,8 +21,9 @@ export class FollowController {
 
   @Post()
   @UseGuards(SupabaseAuthGuard)
-  create(@Body() dto: CreateFollowDto, @GetUser() user: User) {
-    return this.followService.create(dto, user.id);
+  create(@Body() dto: CreateFollowDto) {
+    // Remove @GetUser() parameter
+    return this.followService.create(dto); // Just pass the DTO
   }
 
   @Get()
@@ -38,5 +48,33 @@ export class FollowController {
   @UseGuards(SupabaseAuthGuard)
   remove(@Param('id') id: string) {
     return this.followService.remove(id);
+  }
+  @Get('is-following/:clientId/:businessId')
+  @UseGuards(SupabaseAuthGuard)
+  async isFollowing(
+    @Param('clientId') clientId: string,
+    @Param('businessId') businessId: string,
+  ) {
+    return this.followService.isFollowing(clientId, businessId);
+  }
+  // Add these endpoints to your FollowController
+
+  @Get('business-followers/:businessId')
+  @UseGuards(SupabaseAuthGuard)
+  async getBusinessFollowers(@Param('businessId') businessId: string) {
+    const followers =
+      await this.followService.findFollowersByBusinessId(businessId);
+    const count = await this.followService.getBusinessFollowCount(businessId);
+
+    return {
+      count,
+      followers,
+    };
+  }
+
+  @Get('latest-follower/:businessId')
+  @UseGuards(SupabaseAuthGuard)
+  async getLatestFollower(@Param('businessId') businessId: string) {
+    return this.followService.getLatestBusinessFollower(businessId);
   }
 }
