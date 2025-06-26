@@ -192,4 +192,26 @@ export class FidelityService {
 
     return { expiredCount: expiringTransactions.length };
   }
+  async getClientsWithPointsForBusiness(businessId: string) {
+    // Verify business exists
+    await this.businessService.findOne(businessId);
+
+    return this.prisma.pointsWallet.findMany({
+      where: { 
+        businessId
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          },
+        },
+      },
+      orderBy: {
+        points: 'desc', // Order by points descending (highest first)
+      },
+    });
+  }
 }

@@ -62,4 +62,9 @@ export class FidelityController {
       dto.referenceId,
     );
   }
+    @Get('business-clients/:businessId')
+  @UseGuards(SupabaseAuthGuard)
+  async getClientsWithPointsForBusiness(@Param('businessId') businessId: string) {
+    return this.fidelityService.getClientsWithPointsForBusiness(businessId);
+  }
 }
