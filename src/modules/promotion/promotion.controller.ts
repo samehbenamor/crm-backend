@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   UseGuards,
+  Delete,
 } from '@nestjs/common';
 import { PromotionService } from './promotion.service';
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
@@ -63,4 +64,14 @@ export class PromotionController {
   async getClientRedemptions(@Param('clientId') clientId: string) {
     return this.promotionService.getClientRedemptions(clientId);
   }
+   @Delete(':promotionId')
+  @UseGuards(SupabaseAuthGuard)
+  async softDeletePromotion(@Param('promotionId') promotionId: string) {
+    return this.promotionService.softDeletePromotion(promotionId);
+  }
+  @Get('business/:businessId/deleted')
+@UseGuards(SupabaseAuthGuard)
+async getDeletedBusinessPromotions(@Param('businessId') businessId: string) {
+  return this.promotionService.getDeletedBusinessPromotions(businessId);
+}
 }

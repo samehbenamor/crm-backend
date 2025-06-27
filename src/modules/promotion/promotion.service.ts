@@ -1,5 +1,9 @@
 // promotion/promotion.service.ts
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BusinessService } from '../business/business.service';
 import { FidelityService } from '../fidelity/fidelity.service';
@@ -28,7 +32,10 @@ export class PromotionService {
     await this.businessService.findOne(businessId);
 
     return this.prisma.promotion.findMany({
-      where: { businessId },
+      where: {
+        businessId,
+        deletedAt: null, // Only include non-deleted promotions
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -37,9 +44,10 @@ export class PromotionService {
     await this.businessService.findOne(businessId);
 
     return this.prisma.promotion.findMany({
-      where: { 
+      where: {
         businessId,
-        isActive: true 
+        isActive: true,
+        deletedAt: null, // Only include non-deleted promotions
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -84,7 +92,9 @@ export class PromotionService {
 
       // Check if client has enough points
       if (wallet.points < promotion.pointsCost) {
-        throw new ConflictException('Insufficient points to redeem this promotion');
+        throw new ConflictException(
+          'Insufficient points to redeem this promotion',
+        );
       }
 
       // Spend points
@@ -156,4 +166,38 @@ export class PromotionService {
       orderBy: { redeemedAt: 'desc' },
     });
   }
+  async softDeletePromotion(promotionId: string) {
+    // Check if promotion exists
+    const promotion = await this.prisma.promotion.findUnique({
+      where: { id: promotionId },
+    });
+
+    if (!promotion) {
+      throw new NotFoundException(`Promotion ${promotionId} not found`);
+    }
+
+    if (promotion.deletedAt) {
+      throw new ConflictException('Promotion is already deleted');
+    }
+
+    // Soft delete by setting deletedAt timestamp
+    return this.prisma.promotion.update({
+      where: { id: promotionId },
+      data: {
+        deletedAt: new Date(),
+        isActive: false, // Also deactivate the promotion
+      },
+    });
+  }
+  async getDeletedBusinessPromotions(businessId: string) {
+  await this.businessService.findOne(businessId);
+
+  return this.prisma.promotion.findMany({
+    where: { 
+      businessId,
+      deletedAt: { not: null }, // Only include deleted promotions
+    },
+    orderBy: { deletedAt: 'desc' },
+  });
+}
 }

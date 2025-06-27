@@ -18,7 +18,7 @@ import { BusinessOwnerModule } from './modules/business-owner/business-owner.mod
 import { OtpModule } from './modules/otp/otp.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { FidelityModule } from './modules/fidelity/fidelity.module';
-
+import { PromotionModule } from './modules/promotion/promotion.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -36,6 +36,7 @@ import { FidelityModule } from './modules/fidelity/fidelity.module';
     OtpModule,
     MailerModule,
     FidelityModule,
+    PromotionModule,
     PrismaModule,
   ],
   controllers: [],
