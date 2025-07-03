@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
@@ -41,56 +45,56 @@ export class BusinessService {
       createdAt: business.createdAt.toISOString(),
       updatedAt: business.updatedAt?.toISOString(),
     };
-  }private async moveAndStoreImages(
-  profileImage: Express.Multer.File | undefined,
-  coverImage: Express.Multer.File | undefined,
-  businessId: string,
-  businessName: string,
-): Promise<{ profileUrl: string; coverUrl: string }> {
-  const basePath = join(process.cwd(), 'uploads', 'businesses');
-  const businessFolderName = `${businessName}-${businessId}`
-    .replace(/\s+/g, '-')
-    .toLowerCase();
-  const businessFolderPath = join(basePath, businessFolderName);
-  const profileDir = join(businessFolderPath, 'profile');
-  const coverDir = join(businessFolderPath, 'cover');
-
-  if (!existsSync(profileDir)) mkdirSync(profileDir, { recursive: true });
-  if (!existsSync(coverDir)) mkdirSync(coverDir, { recursive: true });
-
-  let profileUrl = '';
-  let coverUrl = '';
-
-  if (profileImage) {
-  const ext = profileImage.originalname.split('.').pop();
-  const filename = `profile-${uuidv4()}.${ext}`;
-  const dest = join(profileDir, filename);
-  try {
-    console.log('Moving profile image from:', profileImage.path);
-    console.log('To:', dest);
-    moveSync(profileImage.path, dest, { overwrite: true });
-    profileUrl = `/businesses/${businessFolderName}/profile/${filename}`;
-  } catch (err) {
-    console.error('Error moving profile image:', err);
   }
-}
-  if (coverImage) {
-    const ext = coverImage.originalname.split('.').pop();
-    const filename = `cover-${uuidv4()}.${ext}`;
-    const dest = join(coverDir, filename);
-    try {
-    console.log('Moving cover image from:', coverImage.path);
-    console.log('To:', dest);
-    moveSync(coverImage.path, dest, { overwrite: true });
-    coverUrl = `/businesses/${businessFolderName}/cover/${filename}`;
-  } catch (err) {
-    console.error('Error moving profile image:', err);
-  }
-  }
+  private async moveAndStoreImages(
+    profileImage: Express.Multer.File | undefined,
+    coverImage: Express.Multer.File | undefined,
+    businessId: string,
+    businessName: string,
+  ): Promise<{ profileUrl: string; coverUrl: string }> {
+    const basePath = join(process.cwd(), 'uploads', 'businesses');
+    const businessFolderName = `${businessName}-${businessId}`
+      .replace(/\s+/g, '-')
+      .toLowerCase();
+    const businessFolderPath = join(basePath, businessFolderName);
+    const profileDir = join(businessFolderPath, 'profile');
+    const coverDir = join(businessFolderPath, 'cover');
 
-  return { profileUrl, coverUrl };
-}
+    if (!existsSync(profileDir)) mkdirSync(profileDir, { recursive: true });
+    if (!existsSync(coverDir)) mkdirSync(coverDir, { recursive: true });
 
+    let profileUrl = '';
+    let coverUrl = '';
+
+    if (profileImage) {
+      const ext = profileImage.originalname.split('.').pop();
+      const filename = `profile-${uuidv4()}.${ext}`;
+      const dest = join(profileDir, filename);
+      try {
+        console.log('Moving profile image from:', profileImage.path);
+        console.log('To:', dest);
+        moveSync(profileImage.path, dest, { overwrite: true });
+        profileUrl = `/businesses/${businessFolderName}/profile/${filename}`;
+      } catch (err) {
+        console.error('Error moving profile image:', err);
+      }
+    }
+    if (coverImage) {
+      const ext = coverImage.originalname.split('.').pop();
+      const filename = `cover-${uuidv4()}.${ext}`;
+      const dest = join(coverDir, filename);
+      try {
+        console.log('Moving cover image from:', coverImage.path);
+        console.log('To:', dest);
+        moveSync(coverImage.path, dest, { overwrite: true });
+        coverUrl = `/businesses/${businessFolderName}/cover/${filename}`;
+      } catch (err) {
+        console.error('Error moving profile image:', err);
+      }
+    }
+
+    return { profileUrl, coverUrl };
+  }
 
   async create(
     dto: CreateBusinessDto,
@@ -100,12 +104,24 @@ export class BusinessService {
     coverImage?: Express.Multer.File,
   ): Promise<Business> {
     // First, find the business owner associated with this user
-    let businessOwner: { id: string; displayName: string; phoneNumber: string | null; businessCount: number; bio: string | null; website: string | null; userId: string; created_at: Date; updated_at: Date; };
+    let businessOwner: {
+      id: string;
+      displayName: string;
+      phoneNumber: string | null;
+      businessCount: number;
+      bio: string | null;
+      website: string | null;
+      userId: string;
+      created_at: Date;
+      updated_at: Date;
+    };
     try {
       businessOwner = await this.businessOwnerService.findByUserId(userId);
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw new ForbiddenException('User is not registered as a business owner');
+        throw new ForbiddenException(
+          'User is not registered as a business owner',
+        );
       }
       throw error;
     }
@@ -218,9 +234,9 @@ export class BusinessService {
     }
   }
   async findByOwner(ownerId: string): Promise<Business[]> {
-  const businesses = await this.prisma.business.findMany({
-    where: { ownerId },
-  });
-  return businesses.map((business) => this.toBusinessInterface(business));
-}
+    const businesses = await this.prisma.business.findMany({
+      where: { ownerId },
+    });
+    return businesses.map((business) => this.toBusinessInterface(business));
+  }
 }

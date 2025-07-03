@@ -8,13 +8,20 @@ import {
   Put,
   UseGuards,
   Delete,
+  Res,
 } from '@nestjs/common';
 import { PromotionService } from './promotion.service';
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
 import { CreatePromotionDto } from './dto/create-promotion.dto';
 import { UpdatePromotionDto } from './dto/update-promotion.dto';
 import { RedeemPromotionDto } from './dto/redeem-promotion.dto';
-
+import {
+  GenerateRedemptionCodeDto,
+  RedeemCodeDto,
+} from './dto/generate-redemption-code.dto';
+import { Response } from 'express';
+import { createReadStream } from 'fs';
+import { join } from 'path';
 @Controller('promotions')
 export class PromotionController {
   constructor(private readonly promotionService: PromotionService) {}
@@ -64,14 +71,57 @@ export class PromotionController {
   async getClientRedemptions(@Param('clientId') clientId: string) {
     return this.promotionService.getClientRedemptions(clientId);
   }
-   @Delete(':promotionId')
+  @Delete(':promotionId')
   @UseGuards(SupabaseAuthGuard)
   async softDeletePromotion(@Param('promotionId') promotionId: string) {
     return this.promotionService.softDeletePromotion(promotionId);
   }
   @Get('business/:businessId/deleted')
-@UseGuards(SupabaseAuthGuard)
-async getDeletedBusinessPromotions(@Param('businessId') businessId: string) {
-  return this.promotionService.getDeletedBusinessPromotions(businessId);
-}
+  @UseGuards(SupabaseAuthGuard)
+  async getDeletedBusinessPromotions(@Param('businessId') businessId: string) {
+    return this.promotionService.getDeletedBusinessPromotions(businessId);
+  }
+  @Post('generate-code')
+  @UseGuards(SupabaseAuthGuard)
+  async generateRedemptionCode(@Body() dto: GenerateRedemptionCodeDto) {
+    return this.promotionService.generateRedemptionCode(
+      dto.clientId,
+      dto.promotionId,
+    );
+  }
+
+  @Post('redeem-code')
+  @UseGuards(SupabaseAuthGuard)
+  async redeemPromotionCode(@Body() dto: RedeemCodeDto) {
+    return this.promotionService.redeemPromotionCode(dto.code);
+  }
+
+  @Get('code/:code/status')
+  @UseGuards(SupabaseAuthGuard)
+  async getRedemptionCodeStatus(@Param('code') code: string) {
+    return this.promotionService.getRedemptionCodeStatus(code);
+  }
+  @Get('qrcode/:code')
+  @UseGuards(SupabaseAuthGuard)
+  async getQRCodeData(@Param('code') code: string) {
+    return this.promotionService.getQRCodeImage(code);
+  }
+  @Get('qrcode/:code/image')
+  @UseGuards(SupabaseAuthGuard)
+  async getQRCodeImage(@Param('code') code: string, @Res() res: Response) {
+    const { path } = await this.promotionService.getQRCodeImage(code);
+    const file = createReadStream(join(process.cwd(), path));
+    file.pipe(res.type('image/png'));
+  }
+  @Get('wallet/:walletId/unredeemed')
+  @UseGuards(SupabaseAuthGuard)
+  async getWalletUnredeemedPromotions(@Param('walletId') walletId: string) {
+    return this.promotionService.getWalletUnredeemedPromotions(walletId);
+  }
+
+  @Get('wallet/:walletId/redeemed')
+  @UseGuards(SupabaseAuthGuard)
+  async getWalletRedeemedPromotions(@Param('walletId') walletId: string) {
+    return this.promotionService.getWalletRedeemedPromotions(walletId);
+  }
 }

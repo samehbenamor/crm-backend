@@ -16,3 +16,13 @@ export interface PromotionRedemption {
   walletId: string; // references PointsWallet.id
   redeemedAt: string;
 }
+export interface PromotionRedemptionCode {
+  id: string;
+  promotionId: string;
+  walletId: string;
+  code: string;
+  qrCodePath: string;
+  isRedeemed: boolean;
+  createdAt: string;
+  redeemedAt?: string;
+}
