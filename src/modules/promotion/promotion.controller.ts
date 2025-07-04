@@ -124,4 +124,15 @@ export class PromotionController {
   async getWalletRedeemedPromotions(@Param('walletId') walletId: string) {
     return this.promotionService.getWalletRedeemedPromotions(walletId);
   }
+    @Get('client/:clientId/unredeemed-codes')
+  @UseGuards(SupabaseAuthGuard)
+  async getClientUnredeemedCodes(@Param('clientId') clientId: string) {
+    return this.promotionService.getClientUnredeemedCodes(clientId);
+  }
+
+  @Get('client/:clientId/redeemed-codes')
+  @UseGuards(SupabaseAuthGuard)
+  async getClientRedeemedCodes(@Param('clientId') clientId: string) {
+    return this.promotionService.getClientRedeemedCodes(clientId);
+  }
 }

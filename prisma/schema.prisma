@@ -199,7 +199,7 @@ model PromotionRedemptionCode {
   isRedeemed  Boolean  @default(false)
   createdAt   DateTime @default(now())
   redeemedAt  DateTime?
-
+ 
   promotion Promotion    @relation(fields: [promotionId], references: [id])
   wallet    PointsWallet @relation(fields: [walletId], references: [id])
 

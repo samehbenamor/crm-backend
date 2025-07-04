@@ -422,4 +422,72 @@ export class PromotionService {
       code: redemptionCode.code,
     };
   }
+  async getClientUnredeemedCodes(clientId: string) {
+    // First get all wallets for the client
+    const wallets = await this.prisma.pointsWallet.findMany({
+      where: { clientId },
+      select: { id: true },
+    });
+
+    if (!wallets.length) {
+      return [];
+    }
+
+    const walletIds = wallets.map((wallet) => wallet.id);
+
+    return this.prisma.promotionRedemptionCode.findMany({
+      where: {
+        walletId: { in: walletIds },
+        isRedeemed: false,
+      },
+      include: {
+        promotion: {
+          include: {
+            business: {
+              select: {
+                id: true,
+                name: true,
+                logoUrl: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+  async getClientRedeemedCodes(clientId: string) {
+    // First get all wallets for the client
+    const wallets = await this.prisma.pointsWallet.findMany({
+      where: { clientId },
+      select: { id: true },
+    });
+
+    if (!wallets.length) {
+      return [];
+    }
+
+    const walletIds = wallets.map((wallet) => wallet.id);
+
+    return this.prisma.promotionRedemptionCode.findMany({
+      where: {
+        walletId: { in: walletIds },
+        isRedeemed: true,
+      },
+      include: {
+        promotion: {
+          include: {
+            business: {
+              select: {
+                id: true,
+                name: true,
+                logoUrl: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { redeemedAt: 'desc' },
+    });
+  }
 }
