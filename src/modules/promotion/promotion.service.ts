@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BusinessService } from '../business/business.service';
@@ -300,61 +301,76 @@ export class PromotionService {
     });
   }
 
-  async redeemPromotionCode(code: string) {
-    return this.prisma.$transaction(async (prisma) => {
-      const redemptionCode = await prisma.promotionRedemptionCode.findUnique({
-        where: { code },
-        include: {
-          promotion: true,
-          wallet: {
-            include: {
-              client: true,
-            },
+async redeemPromotionCode(code: string, businessOwnerId: string) {
+  return this.prisma.$transaction(async (prisma) => {
+    const redemptionCode = await prisma.promotionRedemptionCode.findUnique({
+      where: { code },
+      include: {
+        promotion: {
+          include: {
+            business: true,
           },
         },
-      });
-
-      if (!redemptionCode) {
-        throw new NotFoundException('Invalid redemption code');
-      }
-
-      if (redemptionCode.isRedeemed) {
-        throw new ConflictException('Code already redeemed');
-      }
-
-      // Delete QR code folder
-      await this.qrCodeService.deleteQRCodeFolder(
-        redemptionCode.promotionId,
-        redemptionCode.wallet.clientId,
-      );
-
-      // Mark code as redeemed
-      await prisma.promotionRedemptionCode.update({
-        where: { id: redemptionCode.id },
-        data: {
-          isRedeemed: true,
-          redeemedAt: new Date(),
-        },
-      });
-
-      // Create redemption record
-      const redemption = await prisma.promotionRedemption.create({
-        data: {
-          promotionId: redemptionCode.promotionId,
-          walletId: redemptionCode.walletId,
-        },
-        include: {
-          promotion: {
-            include: {
-              business: true,
-            },
+        wallet: {
+          include: {
+            client: true,
           },
         },
-      });
-
-      return redemption; // Just return the redemption directly since we're including business
+      },
     });
-  }
+
+    if (!redemptionCode) {
+      throw new NotFoundException('Invalid redemption code');
+    }
+
+    if (redemptionCode.isRedeemed) {
+      throw new ConflictException('Code already redeemed');
+    }
+
+    if (redemptionCode.promotion.business.ownerId !== businessOwnerId) {
+      throw new ForbiddenException('You do not own this business');
+    }
+
+    await this.qrCodeService.deleteQRCodeFolder(
+      redemptionCode.promotionId,
+      redemptionCode.wallet.clientId,
+    );
+
+    await prisma.promotionRedemptionCode.update({
+      where: { id: redemptionCode.id },
+      data: {
+        isRedeemed: true,
+        redeemedAt: new Date(),
+      },
+    });
+
+    const redemption = await prisma.promotionRedemption.create({
+      data: {
+        promotionId: redemptionCode.promotionId,
+        walletId: redemptionCode.walletId,
+      },
+      include: {
+        wallet: {
+          include: {
+            client: true,
+          },
+        },
+      },
+    });
+
+    return {
+      redemption: {
+        id: redemption.id,
+        promotionId: redemption.promotionId,
+        walletId: redemption.walletId,
+        redeemedAt: redemption.redeemedAt,
+      },
+      promotion: redemptionCode.promotion,
+      business: redemptionCode.promotion.business,
+      client: redemption.wallet.client, // Now properly including the client
+    };
+  });
+}
 
   async getWalletUnredeemedPromotions(walletId: string) {
     return this.prisma.promotionRedemptionCode.findMany({

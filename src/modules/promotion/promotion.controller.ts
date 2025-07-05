@@ -91,10 +91,10 @@ export class PromotionController {
   }
 
   @Post('redeem-code')
-  @UseGuards(SupabaseAuthGuard)
-  async redeemPromotionCode(@Body() dto: RedeemCodeDto) {
-    return this.promotionService.redeemPromotionCode(dto.code);
-  }
+@UseGuards(SupabaseAuthGuard)
+async redeemPromotionCode(@Body() dto: RedeemCodeDto) {
+  return this.promotionService.redeemPromotionCode(dto.code, dto.businessOwnerId);
+}
 
   @Get('code/:code/status')
   @UseGuards(SupabaseAuthGuard)
