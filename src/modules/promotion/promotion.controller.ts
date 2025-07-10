@@ -91,10 +91,13 @@ export class PromotionController {
   }
 
   @Post('redeem-code')
-@UseGuards(SupabaseAuthGuard)
-async redeemPromotionCode(@Body() dto: RedeemCodeDto) {
-  return this.promotionService.redeemPromotionCode(dto.code, dto.businessOwnerId);
-}
+  @UseGuards(SupabaseAuthGuard)
+  async redeemPromotionCode(@Body() dto: RedeemCodeDto) {
+    return this.promotionService.redeemPromotionCode(
+      dto.code,
+      dto.businessOwnerId,
+    );
+  }
 
   @Get('code/:code/status')
   @UseGuards(SupabaseAuthGuard)
@@ -124,7 +127,7 @@ async redeemPromotionCode(@Body() dto: RedeemCodeDto) {
   async getWalletRedeemedPromotions(@Param('walletId') walletId: string) {
     return this.promotionService.getWalletRedeemedPromotions(walletId);
   }
-    @Get('client/:clientId/unredeemed-codes')
+  @Get('client/:clientId/unredeemed-codes')
   @UseGuards(SupabaseAuthGuard)
   async getClientUnredeemedCodes(@Param('clientId') clientId: string) {
     return this.promotionService.getClientUnredeemedCodes(clientId);
@@ -135,4 +138,12 @@ async redeemPromotionCode(@Body() dto: RedeemCodeDto) {
   async getClientRedeemedCodes(@Param('clientId') clientId: string) {
     return this.promotionService.getClientRedeemedCodes(clientId);
   }
+  @Get('client/:clientId/has-redeemed/:businessId')
+@UseGuards(SupabaseAuthGuard)
+async hasClientRedeemedPromotion(
+  @Param('clientId') clientId: string,
+  @Param('businessId') businessId: string
+) {
+  return this.promotionService.hasClientRedeemedPromotion(clientId, businessId);
+}
 }
