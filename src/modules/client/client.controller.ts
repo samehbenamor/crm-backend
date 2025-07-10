@@ -66,7 +66,7 @@ export class ClientController {
   ) {
     return this.clientService.updateLocation(id, dto, user.id);
   }
-    @Get(':id/nearby-businesses')
+  @Get(':id/nearby-businesses')
   @UseGuards(SupabaseAuthGuard)
   findNearbyBusinesses(
     @Param('id') id: string,
@@ -76,12 +76,12 @@ export class ClientController {
     return this.clientService.findNearbyBusinesses(id, radiusKm);
   }
   @Put(':id/phone-number')
-@UseGuards(SupabaseAuthGuard)
-async updatePhoneNumber(
-  @Param('id') id: string,
-  @Body() dto: { phoneNumber: string },
-  @GetUser() user: User,
-) {
-  return this.clientService.updatePhoneNumber(id, dto.phoneNumber, user.id);
-}
+  @UseGuards(SupabaseAuthGuard)
+  async updatePhoneNumber(
+    @Param('id') id: string,
+    @Body() dto: { phoneNumber: string },
+    @GetUser() user: User,
+  ) {
+    return this.clientService.updatePhoneNumber(id, dto.phoneNumber, user.id);
+  }
 }

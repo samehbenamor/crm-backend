@@ -19,6 +19,7 @@ import { OtpModule } from './modules/otp/otp.module';
 import { MailerModule } from './modules/mailer/mailer.module';
 import { FidelityModule } from './modules/fidelity/fidelity.module';
 import { PromotionModule } from './modules/promotion/promotion.module';
+import { ReviewModule } from './modules/review/review.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,6 +38,7 @@ import { PromotionModule } from './modules/promotion/promotion.module';
     MailerModule,
     FidelityModule,
     PromotionModule,
+    ReviewModule,
     PrismaModule,
   ],
   controllers: [],
