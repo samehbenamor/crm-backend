@@ -25,13 +25,13 @@ import { multerOptions } from 'src/config/multer.config';
 import { MultiFilesInterceptor } from '../../common/interceptors/multi-files.interceptor';
 @Controller('businesses')
 export class BusinessController {
-  constructor(private readonly businessService: BusinessService) {}
+  constructor(private readonly businessService: BusinessService) { }
   @Post()
   @UseGuards(SupabaseAuthGuard)
   @UseInterceptors(
     MultiFilesInterceptor([
-    { name: 'profileImage', maxCount: 1 },
-    { name: 'coverImage', maxCount: 1 },
+      { name: 'profileImage', maxCount: 1 },
+      { name: 'coverImage', maxCount: 1 },
     ]),
   )
   async create(
@@ -95,8 +95,8 @@ export class BusinessController {
   }
 
   @Get('owner/:ownerId')
-@UseGuards(SupabaseAuthGuard)
-async findByOwner(@Param('ownerId') ownerId: string): Promise<Business[]> {
-  return this.businessService.findByOwner(ownerId);
-}
+  @UseGuards(SupabaseAuthGuard)
+  async findByOwner(@Param('ownerId') ownerId: string): Promise<Business[]> {
+    return this.businessService.findByOwner(ownerId);
+  }
 }

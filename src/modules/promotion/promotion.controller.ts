@@ -24,7 +24,7 @@ import { createReadStream } from 'fs';
 import { join } from 'path';
 @Controller('promotions')
 export class PromotionController {
-  constructor(private readonly promotionService: PromotionService) {}
+  constructor(private readonly promotionService: PromotionService) { }
 
   @Post('business/:businessId')
   @UseGuards(SupabaseAuthGuard)
@@ -139,11 +139,11 @@ export class PromotionController {
     return this.promotionService.getClientRedeemedCodes(clientId);
   }
   @Get('client/:clientId/has-redeemed/:businessId')
-@UseGuards(SupabaseAuthGuard)
-async hasClientRedeemedPromotion(
-  @Param('clientId') clientId: string,
-  @Param('businessId') businessId: string
-) {
-  return this.promotionService.hasClientRedeemedPromotion(clientId, businessId);
-}
+  @UseGuards(SupabaseAuthGuard)
+  async hasClientRedeemedPromotion(
+    @Param('clientId') clientId: string,
+    @Param('businessId') businessId: string
+  ) {
+    return this.promotionService.hasClientRedeemedPromotion(clientId, businessId);
+  }
 }
