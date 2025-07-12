@@ -38,7 +38,8 @@ model Client {
   updated_at              DateTime       @updatedAt
   pointsWallets           PointsWallet[]
   follows                 Follow[]       // Add this relation
-
+  referralsMade           Referral[]     @relation("Referrer")
+  referralsReceived       Referral[]     @relation("Referee")
   @@index([userId])
   Review Review[]
 }
@@ -76,6 +77,7 @@ model Business {
   PointsWallet   PointsWallet[]
   Promotion      Promotion[]
   followers  Follow[] // Add this relation
+  referrals      Referral[]
   @@index([ownerId])
   Review Review[]
 }
@@ -225,4 +227,24 @@ model Review {
   @@unique([clientId, businessId]) // Ensure one review per client per business
   @@index([clientId])
   @@index([businessId])
+}
+
+model Referral {
+  id           String   @id @default(uuid())
+  referrerClientId String   // References Client.id
+  refereeClientId  String?  // References Client.id
+  businessId   String   // References Business.id
+  referralCode String   @unique
+  isCompleted  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  completedAt  DateTime?
+  
+  // Named relations to avoid ambiguity
+  referrer  Client   @relation("Referrer", fields: [referrerClientId], references: [userId])
+  referee   Client?  @relation("Referee", fields: [refereeClientId], references: [userId])
+  business  Business @relation(fields: [businessId], references: [id])
+
+  @@index([referrerClientId])
+  @@index([businessId])
+  @@index([referralCode])
 }

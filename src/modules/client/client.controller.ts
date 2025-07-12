@@ -8,6 +8,7 @@ import {
   Put,
   UseGuards,
   Query,
+  NotFoundException,
 } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -22,7 +23,7 @@ import { User } from '../../common/interfaces/user.interface';
 
 @Controller('clients')
 export class ClientController {
-  constructor(private readonly clientService: ClientService) {}
+  constructor(private readonly clientService: ClientService) { }
 
   /*@Post()
   @UseGuards(SupabaseAuthGuard)
@@ -84,4 +85,26 @@ export class ClientController {
   ) {
     return this.clientService.updatePhoneNumber(id, dto.phoneNumber, user.id);
   }
+  // TODO: In the future we're going to implemen a way for the business to specify the amount of points to award
+  // for now, we will just use a fixed amount of points.
+  @Post(':id/award-referral-points')
+@UseGuards(SupabaseAuthGuard)
+async awardReferralPoints(
+  @Param('id') clientId: string,
+  @Body() dto: { businessId: string, points: number, referralId: string },
+  @GetUser() user: User
+) {
+  // Verify requesting user owns the client
+  const client = await this.clientService.findByUserId(user.id);
+  if (!client || client.id !== clientId) {
+    throw new NotFoundException('Client not found or unauthorized');
+  }
+
+  return this.clientService.awardReferralPoints(
+    clientId, 
+    dto.businessId, 
+    dto.points, 
+    dto.referralId
+  );
+}
 }

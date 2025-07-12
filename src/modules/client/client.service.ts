@@ -13,7 +13,7 @@ export class ClientService {
     private prisma: PrismaService,
     private readonly supabaseConfig: SupabaseConfig,
     private geospatialService: GeospatialService,
-  ) {}
+  ) { }
 
   async createWithTransaction(
     dto: CreateClientDto,
@@ -210,5 +210,43 @@ export class ClientService {
       }
       throw error;
     }
+  }
+  async awardReferralPoints(
+    clientId: string,
+    businessId: string,
+    points: number,
+    referralId: string
+  ) {
+    return this.prisma.$transaction(async (prisma) => {
+      // Mark referral as completed
+      await prisma.referral.update({
+        where: { id: referralId },
+        data: {
+          isCompleted: true,
+          completedAt: new Date(),
+          refereeClientId: clientId // Add this to track which client completed it
+        }
+      });
+
+      // Award points
+      const wallet = await prisma.pointsWallet.upsert({
+        where: { clientId_businessId: { clientId, businessId } },
+        update: { points: { increment: points } },
+        create: { clientId, businessId, points }
+      });
+
+      // Record transaction
+      await prisma.pointsTransaction.create({
+        data: {
+          walletId: wallet.id,
+          points,
+          type: 'EARNED',
+          description: `Referral bonus for ${referralId}`,
+          referenceId: referralId
+        }
+      });
+
+      return wallet;
+    });
   }
 }

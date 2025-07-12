@@ -20,6 +20,7 @@ import { MailerModule } from './modules/mailer/mailer.module';
 import { FidelityModule } from './modules/fidelity/fidelity.module';
 import { PromotionModule } from './modules/promotion/promotion.module';
 import { ReviewModule } from './modules/review/review.module';
+import { ReferralModule } from './modules/referral/referral.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -39,6 +40,7 @@ import { ReviewModule } from './modules/review/review.module';
     FidelityModule,
     PromotionModule,
     ReviewModule,
+    ReferralModule,
     PrismaModule,
   ],
   controllers: [],
