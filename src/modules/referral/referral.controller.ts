@@ -20,32 +20,38 @@ export class ReferralController {
   constructor(private readonly referralService: ReferralService, private readonly clientService: ClientService) {}
 
   @Post()
-  @UseGuards(SupabaseAuthGuard)
-  async create(
-    @Body() dto: CreateReferralDto,
-    @GetUser() user: User,
-  ) {
-    // Get client for authenticated user
-    const client = await this.clientService.findByUserId(user.id);
-    if (!client || client.id !== dto.referrerClientId) {
-      throw new Error('Unauthorized referral creation');
-    }
-    return this.referralService.createReferral(dto);
+@UseGuards(SupabaseAuthGuard)
+async create(
+  @Body() dto: CreateReferralDto,
+  @GetUser() user: User,
+) {
+  const client = await this.clientService.findByUserId(user.id);
+  if (!client) {
+    throw new Error('Client profile not found');
   }
+  return this.referralService.createReferral(client.id, dto.businessId);
+}
 
-  @Post('process-follow')
-  @UseGuards(SupabaseAuthGuard)
-  async processFollow(
-    @Body() dto: ProcessReferralFollowDto,
-    @GetUser() user: User,
-  ) {
-    // Get client for authenticated user
-    const client = await this.clientService.findByUserId(user.id);
-    if (!client || client.id !== dto.refereeClientId) {
-      throw new Error('Unauthorized referral processing');
-    }
-    return this.referralService.processReferralFollow(dto);
+@Post('process-follow')
+@UseGuards(SupabaseAuthGuard)
+async processFollow(
+  @Body() dto: ProcessReferralFollowDto,
+  @GetUser() user: User,
+) {
+  const client = await this.clientService.findByUserId(user.id);
+  if (!client || client.id !== dto.refereeClientId) {
+    throw new Error('Unauthorized referral processing');
   }
+  
+  const result = await this.referralService.processReferralFollow(dto);
+  
+  return {
+    message: 'Successfully processed referral follow',
+    referral: result.referral,
+    pointsAwarded: result.pointsAwarded,
+    referrerClientId: result.referrerClientId
+  };
+}
 
    @Get('my-referrals')
   @UseGuards(SupabaseAuthGuard)

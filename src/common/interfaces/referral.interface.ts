@@ -4,8 +4,8 @@ import { Client } from './client.interface';
 
 export interface Referral {
   id: string;
-  referrerId: string;
-  refereeId: string | null;
+  referrerClientId: string; // Changed from referrerId
+  refereeClientId: string | null; // Changed from refereeId
   businessId: string;
   referralCode: string;
   isCompleted: boolean;

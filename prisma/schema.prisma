@@ -240,8 +240,8 @@ model Referral {
   completedAt  DateTime?
   
   // Named relations to avoid ambiguity
-  referrer  Client   @relation("Referrer", fields: [referrerClientId], references: [userId])
-  referee   Client?  @relation("Referee", fields: [refereeClientId], references: [userId])
+  referrer  Client   @relation("Referrer", fields: [referrerClientId], references: [id])
+  referee   Client?  @relation("Referee", fields: [refereeClientId], references: [id])
   business  Business @relation(fields: [businessId], references: [id])
 
   @@index([referrerClientId])

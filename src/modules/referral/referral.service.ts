@@ -36,28 +36,31 @@ export class ReferralService {
     private prisma: PrismaService,
     private businessService: BusinessService,
     private clientService: ClientService,
-  ) {}
+  ) { }
 
   async generateReferralCode(): Promise<string> {
     return uuidv4().replace(/-/g, '').substring(0, 8).toUpperCase();
   }
 
-  async createReferral(dto: CreateReferralDto): Promise<any> {
-    // Verify business exists
-    await this.businessService.findOne(dto.businessId);
-    
-    // Verify referrer client exists
-    const referrer = await this.clientService.findOne(dto.referrerClientId);
-    if (!referrer) {
-      throw new Error('Referrer client not found');
-    }
+  async createReferral(
+    referrerClientId: string,
+    businessId: string
+  ): Promise<any> {
+    // Verify business exists (still needed)
+    await this.businessService.findOne(businessId);
 
     const referralCode = await this.generateReferralCode();
-
+    console.log('Attempting to create referral with:', {
+      referrerClientId,
+      businessId,
+      clientExists: await this.prisma.client.count({
+        where: { id: referrerClientId }
+      })
+    });
     return this.prisma.referral.create({
       data: {
-        referrerClientId: dto.referrerClientId, // Changed from referrerId
-        businessId: dto.businessId,
+        referrerClientId, // Now using pre-validated ID
+        businessId,
         referralCode,
         isCompleted: false,
       },
@@ -68,7 +71,7 @@ export class ReferralService {
   async processReferralFollow(dto: ProcessReferralFollowDto): Promise<any> {
     // Verify business exists
     await this.businessService.findOne(dto.businessId);
-    
+
     // Verify referee client exists
     const referee = await this.clientService.findOne(dto.refereeClientId);
     if (!referee) {
@@ -79,7 +82,7 @@ export class ReferralService {
     const referral = await this.prisma.referral.findFirst({
       where: {
         businessId: dto.businessId,
-        refereeClientId: null, // Changed from refereeId
+        refereeClientId: null,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -88,13 +91,50 @@ export class ReferralService {
       throw new Error('No pending referral found');
     }
 
-    return this.prisma.referral.update({
-      where: { id: referral.id },
-      data: {
-        refereeClientId: dto.refereeClientId, // Changed from refereeId
-        isCompleted: true,
-        completedAt: new Date(),
-      },
+    return this.prisma.$transaction(async (prisma) => {
+      // 1. Update referral status
+      const updatedReferral = await prisma.referral.update({
+        where: { id: referral.id },
+        data: {
+          refereeClientId: dto.refereeClientId,
+          isCompleted: true,
+          completedAt: new Date(),
+        },
+      });
+
+      // 2. Award points to referrer (not the follower!)
+      const pointsToAward = 100; // Or get this from business config
+      const referrerWallet = await prisma.pointsWallet.upsert({
+        where: {
+          clientId_businessId: {
+            clientId: referral.referrerClientId,
+            businessId: dto.businessId
+          }
+        },
+        update: { points: { increment: pointsToAward } },
+        create: {
+          clientId: referral.referrerClientId,
+          businessId: dto.businessId,
+          points: pointsToAward
+        }
+      });
+
+      // 3. Record transaction
+      await prisma.pointsTransaction.create({
+        data: {
+          walletId: referrerWallet.id,
+          points: pointsToAward,
+          type: 'EARNED',
+          description: `Referral bonus for ${referral.id}`,
+          referenceId: referral.id
+        }
+      });
+
+      return {
+        referral: updatedReferral,
+        pointsAwarded: pointsToAward,
+        referrerClientId: referral.referrerClientId
+      };
     });
   }
 
