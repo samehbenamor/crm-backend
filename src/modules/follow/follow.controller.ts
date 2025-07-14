@@ -17,7 +17,7 @@ import { User } from '../../common/interfaces/user.interface';
 
 @Controller('follows')
 export class FollowController {
-  constructor(private readonly followService: FollowService) {}
+  constructor(private readonly followService: FollowService) { }
 
   @Post()
   @UseGuards(SupabaseAuthGuard)
@@ -76,5 +76,11 @@ export class FollowController {
   @UseGuards(SupabaseAuthGuard)
   async getLatestFollower(@Param('businessId') businessId: string) {
     return this.followService.getLatestBusinessFollower(businessId);
+  }
+  // follow.controller.ts
+  @Get('client/:clientId/businesses')
+  @UseGuards(SupabaseAuthGuard)
+  async getClientFollowedBusinesses(@Param('clientId') clientId: string) {
+    return this.followService.findBusinessesByClientId(clientId);
   }
 }

@@ -87,4 +87,20 @@ export class FollowService {
       },
     });
   }
+  // follow.service.ts
+async findBusinessesByClientId(clientId: string) {
+  return this.prisma.follow.findMany({
+    where: { clientId },
+    select: {
+      business: {
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          // Add any other business fields you need
+        },
+      },
+    },
+  }).then(follows => follows.map(follow => follow.business));
+}
 }
