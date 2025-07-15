@@ -30,10 +30,12 @@ async function bootstrap() {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: true },
     })
   );
 
   // Static files
+  app.setGlobalPrefix('api');
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   await app.listen(port, '0.0.0.0', () => {
