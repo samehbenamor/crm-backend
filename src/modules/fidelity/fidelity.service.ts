@@ -47,7 +47,21 @@ export class FidelityService {
       },
     });
   }
-
+async getClientWalletsWithoutTransactions(clientId: string) {
+  await this.clientService.findOne(clientId);
+  return this.prisma.pointsWallet.findMany({
+    where: { clientId },
+    include: {
+      business: {
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+        },
+      },
+    },
+  });
+}
   async getWalletTransactions(walletId: string) {
     const wallet = await this.prisma.pointsWallet.findUnique({
       where: { id: walletId },

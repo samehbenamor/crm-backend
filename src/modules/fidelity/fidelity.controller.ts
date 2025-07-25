@@ -21,6 +21,11 @@ export class FidelityController {
   async getClientWallets(@Param('clientId') clientId: string) {
     return this.fidelityService.getClientWallets(clientId);
   }
+  @Get('wallets-no-transactions/:clientId')
+@UseGuards(SupabaseAuthGuard)
+async getClientWalletsWithoutTransactions(@Param('clientId') clientId: string) {
+  return this.fidelityService.getClientWalletsWithoutTransactions(clientId);
+}
 
   @Get('wallet/:clientId/:businessId')
   @UseGuards(SupabaseAuthGuard)
